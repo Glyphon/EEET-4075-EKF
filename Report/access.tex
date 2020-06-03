@@ -38,8 +38,24 @@ Several different ways to combine the estimations of different sensors, difficul
 
 \section{Methodology}
 \label{sec:meth}
+	
+\subsection{Odometry}
 
-
+	\begin{equation}
+	\label{eq:xvec1}
+		\dot{\boldsymbol{x}} = 
+		\begin{bmatrix}
+			\dot{x}		\\
+			\dot{y}		\\
+			\dot{\theta}
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+			\frac{r}{2}\left(\omega_{l} + \omega_{r}\right)\cos{\theta}	\\
+			\frac{r}{2}\left(\omega_{l} + \omega_{r}\right)\sin{\theta}	\\
+			\frac{r}{b}\left(\omega_{r} - \omega_{l}\right)
+		\end{bmatrix}
+	\end{equation}
 \section{Results and Discussion}
 \label{sec:res}
 

@@ -38,24 +38,179 @@ Several different ways to combine the estimations of different sensors, difficul
 
 \section{Methodology}
 \label{sec:meth}
-	
-\subsection{Odometry}
-
+\subsection{System Model}
 	\begin{equation}
-	\label{eq:xvec1}
-		\dot{\boldsymbol{x}} = 
+	\label{eq:xsys}
+		\boldsymbol{x}_{ k} = 
 		\begin{bmatrix}
-			\dot{x}		\\
-			\dot{y}		\\
-			\dot{\theta}
+			x _{ k}	\\
+			y_{ k}		\\
+			\theta_{ k}	\\
+			\phi_{1,\,k}	\\
+			r_{1,\,k}	\\
+			\phi_{2,\,k}	\\
+			r_{2,\,k}	\\
+			\phi_{3,\,k}	\\
+			r_{3,\,k}	\\
+			\phi_{4,\,k}	\\
+			r_{4,\,k}
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
-			\frac{r}{2}\left(\omega_{l} + \omega_{r}\right)\cos{\theta}	\\
-			\frac{r}{2}\left(\omega_{l} + \omega_{r}\right)\sin{\theta}	\\
-			\frac{r}{b}\left(\omega_{r} - \omega_{l}\right)
+			x_{k-1}+Tv\cos{\left(\theta_{k-1}\right)}								\\
+			y_{k-1}+Tv\sin{\left(\theta_{k-1}\right)}								\\
+			\theta_{k-1} + T\omega											\\
+			\text{atan2}\left(\left(y_{1} - y_{k}\right),\,\left(x_{1} -x_{k}\right)\right) - \theta_{k}	\\
+			\sqrt{\left(y_{1} - y_{k}\right)^{2}+\left(x_{1} - x_{k}\right)^{2}}				\\
+			\text{atan2}\left(\left(y_{2} - y_{k}\right)\left(x_{2} -x_{k}\right)\right) - \theta_{k}		\\
+			\sqrt{\left(y_{2} - y_{k}\right)^{2}+\left(x_{2} - x_{k}\right)^{2}}				\\
+			\text{atan2}\left(\left(y_{3} - y_{k}\right),\,\left(x_{3} -x_{k}\right)\right) - \theta_{k}	\\
+			\sqrt{\left(y_{3} - y_{k}\right)^{2}+\left(x_{3} - x_{k}\right)^{2}}				\\
+			\text{atan2}\left(\left(y_{4} - y_{k}\right),\,\left(x_{4} -x_{k}\right)\right) - \theta_{k}	\\
+			\sqrt{\left(y_{4} - y_{k}\right)^{2}+\left(x_{4} - x_{k}\right)^{2}}
 		\end{bmatrix}
 	\end{equation}
+	
+	\begin{equation}
+	\label{eq:Fsys}
+	\begin{aligned}
+		&\boldsymbol{F}_{k} = \frac{\partial\boldsymbol{f}}{\partial\boldsymbol{x_{k-1}}}	\\
+		& =
+		\begin{bmatrix}
+			1	&0	&-Tv\sin{\left(\theta_{k-1}\right)}	&0	&0	&\dots	\\
+			0	&1	&Tv\cos{\left(\theta_{k-1}\right)}	&0	&0	&\dots	\\
+			0	&0	&1						&0	&0	&\dots	\\
+			\frac{\partial\phi_{1,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{1,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{1,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial r_{1,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{1,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{1,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial\phi_{2,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{2,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{2,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial r_{2,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{2,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{2,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial\phi_{3,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{3,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{3,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial r_{3,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{4,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{3,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial\phi_{4,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{4,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{4,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
+			\frac{\partial r_{4,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{5,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{4,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots
+		\end{bmatrix}
+	\end{aligned}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derphix}
+		\frac{\partial \phi_{i,\,k-1}}{\partial x_{k-1}} = \frac{y_{k}-y_{i}}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)^{2}}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derphiy}
+		\frac{\partial \phi_{i,\,k-1}}{\partial y_{k-1}} = \frac{1}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derphitheta}
+	\begin{aligned}
+		&\frac{\partial \phi_{i,\,k-1}}{\partial \theta_{k-1}}	\\
+		&\shortparallel	\\
+		&\frac{Tv\left(Tv+\cos{\left(\theta_{k-1}\right)}\left(x_{k-1}-x_{i}\right)+\sin{\left(\theta_{k-1}\right)}\left(y_{i}-y_{k-1}\right)\right)}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)^{2}}-1
+	\end{aligned}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derrx}
+		\frac{\partial r_{i,\,k-1}}{\partial x_{k-1}} = \frac{x_{k}-x_{i}}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derry}
+		\frac{\partial r_{i,\,k-1}}{\partial y_{k-1}} = \frac{y_{k}-y_{i}}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:derrtheta}
+	\begin{aligned}
+		&\frac{\partial r_{i,\,k-1}}{\partial \theta_{k-1}}	\\
+		&\shortparallel	\\
+		&\frac{Tv\left(\cos{\left(\theta_{k-1}\right)}\left(y_{k-1}-y_{i}\right)+\sin{\left(\theta_{k-1}\right)}\left(x_{i}-x_{k-1}\right)\right)}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
+	\end{aligned}
+	\end{equation}
+
+\subsection{Measurement}
+
+	\begin{equation}
+	\label{eq:delts}
+		\delta s_{k} = \frac{s_{r,k} - s_{r,k-1} + s_{l,k} - s_{l,k-1}}{2}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:deltth}
+		\delta \theta_{k} = \frac{s_{r,k} - s_{r,k-1} + s_{l,k} - s_{l,k-1}}{b}
+	\end{equation}
+	where $b$ is the wheelbase in m,
+	\begin{equation}
+	\label{eq:b}
+		b = 0.287
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:hsys}
+		\boldsymbol{h}_{ k} =
+		\begin{bmatrix}
+			\delta s_{k} 		\\
+			\delta\theta_{k}	\\
+			\omega_{k}
+		\end{bmatrix}
+		=
+		\begin{bmatrix}
+			\sqrt{\left(x_{k} - x_{k-1}\right)^{2} + \left(y_{k} - y_{k-1}\right)^{2}}	\\
+			\theta_{k} - \theta_{k-1}								\\
+			\frac{\theta_{k}-\theta_{k-1}}{T}
+		\end{bmatrix}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:Hsys}
+		\boldsymbol{H}_{k}	=
+		\begin{bmatrix}
+			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
+			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
+			0															&1	&\frac{1}{T}	\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+			0															&0	&0		\\
+		\end{bmatrix}^{\top}
+	\end{equation}
+	
+\subsection{EKF}
+
+	a priori estimate
+	\begin{equation}
+	\label{eq:x-}
+		\hat{\boldsymbol{x}}_{k}^{-}=\boldsymbol{f}_{k-1}\left(\hat{\boldsymbol{x}}^{+}_{k-1},\,\boldsymbol{u}_{k-1}\right)
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:P+}
+		\boldsymbol{P}_{k}^{-} = \boldsymbol{F}_{k-1}\boldsymbol{P}_{k-1}^{+}\boldsymbol{F}_{k-1}^{\top} + \boldsymbol{Q}_{k-1}
+	\end{equation}
+	
+	Kalman gain update,
+	\begin{equation}
+	\label{eq:K}
+		\boldsymbol{K}_{k} = \boldsymbol{P}_{k}^{-}\boldsymbol{H}_{k}^{\top}\left(\boldsymbol{H}_{k}\boldsymbol{P}{k}^{-}\boldsymbol{H}_{k}^{\top} + \boldsymbol{R}_{k} \right)^{-1}
+	\end{equation}
+	
+	a posteriori estimate,
+	\begin{equation}
+	\label{eq:x+}
+		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{k}\left(\boldsymbol{y}_{k}- \boldsymbol{h}_{k}\right)
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:p+}
+		\boldsymbol{P}_{k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{k}\boldsymbol{H}_{k}\right)\boldsymbol{P}_{k}^{-}
+	\end{equation}
+	
 \section{Results and Discussion}
 \label{sec:res}
 

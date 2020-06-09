@@ -9,6 +9,11 @@
 \usepackage{caption}
 \usepackage{etoolbox}
 \usepackage{placeins}
+\usepackage{tikz}
+	\NewSpotColorSpace{PANTONE}
+	\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
+	\SetPageColorSpace{PANTONE}%
+
 
 \begin{document}
 
@@ -45,89 +50,25 @@ Several different ways to combine the estimations of different sensors, difficul
 		\begin{bmatrix}
 			x _{ k}	\\
 			y_{ k}		\\
-			\theta_{ k}	\\
-			\phi_{1,\,k}	\\
-			r_{1,\,k}	\\
-			\phi_{2,\,k}	\\
-			r_{2,\,k}	\\
-			\phi_{3,\,k}	\\
-			r_{3,\,k}	\\
-			\phi_{4,\,k}	\\
-			r_{4,\,k}
+			\theta_{ k}
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
 			x_{k-1}+Tv\cos{\left(\theta_{k-1}\right)}								\\
 			y_{k-1}+Tv\sin{\left(\theta_{k-1}\right)}								\\
-			\theta_{k-1} + T\omega											\\
-			\text{atan2}\left(\left(y_{1} - y_{k}\right),\,\left(x_{1} -x_{k}\right)\right) - \theta_{k}	\\
-			\sqrt{\left(y_{1} - y_{k}\right)^{2}+\left(x_{1} - x_{k}\right)^{2}}				\\
-			\text{atan2}\left(\left(y_{2} - y_{k}\right)\left(x_{2} -x_{k}\right)\right) - \theta_{k}		\\
-			\sqrt{\left(y_{2} - y_{k}\right)^{2}+\left(x_{2} - x_{k}\right)^{2}}				\\
-			\text{atan2}\left(\left(y_{3} - y_{k}\right),\,\left(x_{3} -x_{k}\right)\right) - \theta_{k}	\\
-			\sqrt{\left(y_{3} - y_{k}\right)^{2}+\left(x_{3} - x_{k}\right)^{2}}				\\
-			\text{atan2}\left(\left(y_{4} - y_{k}\right),\,\left(x_{4} -x_{k}\right)\right) - \theta_{k}	\\
-			\sqrt{\left(y_{4} - y_{k}\right)^{2}+\left(x_{4} - x_{k}\right)^{2}}
+			\theta_{k-1} + T\omega
 		\end{bmatrix}
 	\end{equation}
 	
 	\begin{equation}
 	\label{eq:Fsys}
-	\begin{aligned}
-		&\boldsymbol{F}_{k} = \frac{\partial\boldsymbol{f}}{\partial\boldsymbol{x_{k-1}}}	\\
-		& =
+		\boldsymbol{F}_{k} = \frac{\partial\boldsymbol{f}}{\partial\boldsymbol{x_{k-1}}}
+		=
 		\begin{bmatrix}
-			1	&0	&-Tv\sin{\left(\theta_{k-1}\right)}	&0	&0	&\dots	\\
-			0	&1	&Tv\cos{\left(\theta_{k-1}\right)}	&0	&0	&\dots	\\
-			0	&0	&1						&0	&0	&\dots	\\
-			\frac{\partial\phi_{1,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{1,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{1,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial r_{1,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{1,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{1,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial\phi_{2,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{2,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{2,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial r_{2,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{2,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{2,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial\phi_{3,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{3,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{3,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial r_{3,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{4,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{3,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial\phi_{4,\,k-1}}{\partial x_{k-1}}	&\frac{\partial\phi_{4,\,k-1}}{\partial y_{k-1}}	&\frac{\partial\phi_{4,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots	\\
-			\frac{\partial r_{4,\,k-1}}{\partial x_{k-1}}	&\frac{\partial r_{5,\,k-1}}{\partial y_{k-1}}	&\frac{\partial r_{4,\,k-1}}{\partial \theta_{k-1}}	&0	&0	&\dots
+			1	&0	&-Tv\sin{\left(\theta_{k-1}\right)}	\\
+			0	&1	&Tv\cos{\left(\theta_{k-1}\right)}	\\
+			0	&0	&1
 		\end{bmatrix}
-	\end{aligned}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derphix}
-		\frac{\partial \phi_{i,\,k-1}}{\partial x_{k-1}} = \frac{y_{k}-y_{i}}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)^{2}}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derphiy}
-		\frac{\partial \phi_{i,\,k-1}}{\partial y_{k-1}} = \frac{1}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derphitheta}
-	\begin{aligned}
-		&\frac{\partial \phi_{i,\,k-1}}{\partial \theta_{k-1}}	\\
-		&\shortparallel	\\
-		&\frac{Tv\left(Tv+\cos{\left(\theta_{k-1}\right)}\left(x_{k-1}-x_{i}\right)+\sin{\left(\theta_{k-1}\right)}\left(y_{i}-y_{k-1}\right)\right)}{\left(\frac{\left(y_{k}-y_{i}\right)^{2}}{\left(x_{k}-x_{i}\right)^{2}}+1\right)\left(x_{k}-x_{i}\right)^{2}}-1
-	\end{aligned}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derrx}
-		\frac{\partial r_{i,\,k-1}}{\partial x_{k-1}} = \frac{x_{k}-x_{i}}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derry}
-		\frac{\partial r_{i,\,k-1}}{\partial y_{k-1}} = \frac{y_{k}-y_{i}}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
-	\end{equation}
-	
-	\begin{equation}
-	\label{eq:derrtheta}
-	\begin{aligned}
-		&\frac{\partial r_{i,\,k-1}}{\partial \theta_{k-1}}	\\
-		&\shortparallel	\\
-		&\frac{Tv\left(\cos{\left(\theta_{k-1}\right)}\left(y_{k-1}-y_{i}\right)+\sin{\left(\theta_{k-1}\right)}\left(x_{i}-x_{k-1}\right)\right)}{\sqrt{\left( x_{k} - x_{i} \right)^{2}+\left( y_{k} - y_{i} \right)^{2}}}
-	\end{aligned}
 	\end{equation}
 
 \subsection{Measurement}
@@ -170,16 +111,56 @@ Several different ways to combine the estimations of different sensors, difficul
 			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
 			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
 			0															&1	&\frac{1}{T}	\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
-			0															&0	&0		\\
 		\end{bmatrix}^{\top}
 	\end{equation}
+
+\subsection{LiDaR}
+	To estimate the orientation of the turtlebot, the angle to the closest beacon is used as a correction.
+	
+	To estimate the position of the turtlebot, the intersection of two circles is calculated knowing their center coordinates and radii.
+	\begin{equation}
+	\begin{aligned}
+		\left(x-x_{1}\right)^{2} + \left(y-y_{1}\right)^{2}=r_{1}^{2}	\\
+		\left(x-x_{2}\right)^{2} + \left(y-y_{2}\right)^{2}=r_{2}^{2}
+	\end{aligned}
+	\end{equation}
+	Rearranging, and with the assumption that $x_{1}=x_{2}$  in both cases we get
+	\begin{equation}
+		y = -\frac{r_{1}^{2}-r_{2}^{2}-y_{1}^{2}+y_{2}^{2}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	
+	\begin{equation}
+	\begin{aligned}
+		x 		&= \pm \frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}	\\
+		\beta_{1} 	&= \left(r_{1}+r_{2}\right)^{2}-\left(y_{1}-y_{2}\right)^{2}		\\
+		\beta_{2} 	&=\left(y_{1}-y_{2}\right)^{2}-\left(r_{1}-r_{2}\right)^{2}
+	\end{aligned}
+	\end{equation}
+	As we know the fence around which the bot cannot escape, one of the possible positions can be eliminated, leaving BLAH if using the left beacons, and BLAH if using the right beacons.
+	\begin{equation}
+		x 		= \frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	\begin{equation}
+		x 		= 3.5-\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	
+	
+	\begin{tikzpicture}
+%		\draw[step=1cm,lightgray,very thin] (-0.9,-0.9) grid (4.9, 3.9);
+		\foreach \x in {0,1,2,3}
+ 			\draw (\x cm,1pt) -- (\x cm,-1pt) node[anchor=north] {$\x$};
+		\foreach \y in {0,1,2,3}
+			\draw (1pt,\y cm) -- (-1pt,\y cm) node[anchor=east] {$\y$};
+		\filldraw[fill=green!20!white, green!20!white] (0,3) -- ({3.5*cos(asin(1.5/3.5))},1.5) arc ({360-asin(1.5/3.5)}:360:3.5cm);
+		\filldraw[fill=green!20!white, green!20!white] (0,0) -- (3.5,0) arc (0:{asin(1.5/3.5)}:3.5cm);
+		\filldraw[fill=green!20!white, green!20!white] (0,0) -- (0,3) -- ({3.5*cos(asin(1.5/3.5))},1.5);
+		\filldraw[fill=red, red] ({3.5*cos(asin(1.5/3.5))},1.5) arc ({360-asin(1.5/3.5)}:360:3.5cm) -- (3.5,0) arc (0:{asin(1.5/3.5)}:3.5cm);
+		\draw (0,0) -- (3.5,0) -- (3.5,3) -- (0,3) -- (0,0);
+		\draw[thick,->] (0,0) -- (4,0);
+		\draw[thick,->] (0,0) -- (0,3.5);
+		\filldraw[fill=blue, blue] (0,0) circle (0.1cm);
+		\filldraw[fill=blue, blue] (0,3) circle (0.1cm);
+	\end{tikzpicture}
 	
 \subsection{EKF}
 
@@ -197,20 +178,32 @@ Several different ways to combine the estimations of different sensors, difficul
 	Kalman gain update,
 	\begin{equation}
 	\label{eq:K}
-		\boldsymbol{K}_{k} = \boldsymbol{P}_{k}^{-}\boldsymbol{H}_{k}^{\top}\left(\boldsymbol{H}_{k}\boldsymbol{P}{k}^{-}\boldsymbol{H}_{k}^{\top} + \boldsymbol{R}_{k} \right)^{-1}
+		\boldsymbol{K}_{1,\,k} = \boldsymbol{P}_{k}^{-}\boldsymbol{H}_{1,\,k}^{\top}\left(\boldsymbol{H}_{1,\,k}\boldsymbol{P}{1,\,k}^{-}\boldsymbol{H}_{1,\,k}^{\top} + \boldsymbol{R}_{1,\,k} \right)^{-1}
 	\end{equation}
 	
 	a posteriori estimate,
 	\begin{equation}
 	\label{eq:x+}
-		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{k}\left(\boldsymbol{y}_{k}- \boldsymbol{h}_{k}\right)
+		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right)
 	\end{equation}
 	
 	\begin{equation}
 	\label{eq:p+}
-		\boldsymbol{P}_{k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{k}\boldsymbol{H}_{k}\right)\boldsymbol{P}_{k}^{-}
+		\boldsymbol{P}_{1,\,k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{1,\,k}\boldsymbol{H}_{1,\,k}\right)\boldsymbol{P}_{1,\,k}^{-}
 	\end{equation}
-	
+	When the secondary measurement is received, the kalman gain, error, and state estimate are updated
+	\begin{equation}
+	\label{eq:K2}
+		\boldsymbol{K}_{2,\,k} = \boldsymbol{P}_{1,\,k}^{-}\boldsymbol{H}_{2,\,k}^{\top}\left(\boldsymbol{H}_{2,\,k}\boldsymbol{P}_{1,\,k}^{-}\boldsymbol{H}_{2,\,k}^{\top} + \boldsymbol{R}_{2,\,k} \right)^{-1}
+	\end{equation}
+	\begin{equation}
+	\label{eq:p2+}
+		\boldsymbol{P}_{2,\,k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{2,\,k}\boldsymbol{H}_{2,\,k}\right)\boldsymbol{P}_{1,\,k}^{-}
+	\end{equation}
+	\begin{equation}
+	\label{eq:x+}
+		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right) + \boldsymbol{K}_{2,\,k}\left(\boldsymbol{y}_{2,\,k}-\boldsymbol{H}_{2,\,k}\hat{\boldsymbol{x}}_{k}^{-}\right)
+	\end{equation}
 \section{Results and Discussion}
 \label{sec:res}
 
@@ -220,6 +213,9 @@ Several different ways to combine the estimations of different sensors, difficul
 
 
 \section{References}
+Trajectory Planning for Nonholonomic Mobile Robot Using Extended Kalman Filter\par
+Integrated Indoor Navigation System for Ground Vehicles With Automatic 3-D Alignment and Position Initialization.\par
+Incorporating delayed and infrequent measurements in Extended Kalman Filter based nonlinear state estimation.\par
 
 \EOD
 

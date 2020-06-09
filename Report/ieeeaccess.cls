@@ -356,7 +356,7 @@
 \def\thevol{N/A}
 \def\theyear{2020}
 \def\vol#1{\gdef\thevol{#1}}
-\def\year#1{\gdef\theyear{#1}}
+\def\Year#1{\gdef\theyear{#1}}
 \def\pubid#1{\gdef\@pubid{#1}}
 \def\headname#1{\gdef\headName{#1}}
 \ifjtehm

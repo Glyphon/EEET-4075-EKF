@@ -39,7 +39,8 @@
 
 \section{Related Works}
 \label{sec:rel}
-Several different ways to combine the estimations of different sensors, difficulties with multi-rate systems. Variants or modifications on EKF and UKF, compare and contrast, computational cost, relative accuracy, limitations. maybe compare to particle filters as well? Need for an initial estimate of position and heading. Beacon based navigation.
+	Several different ways to combine the estimations of different sensors, difficulties with multi-rate systems. Variants or modifications on EKF and UKF, compare and contrast, computational cost, relative accuracy, limitations. maybe compare to particle filters as well? Need for an initial estimate of position and heading. Beacon based navigation.\par
+	Using Alexander's Method for fusion of absolute and dead reckoning system due to update rate of LiDaR being much slower than that of odometry and IMU.
 
 \section{Methodology}
 \label{sec:meth}
@@ -94,15 +95,13 @@ Several different ways to combine the estimations of different sensors, difficul
 		\begin{bmatrix}
 			\delta s_{k} 		\\
 			\delta\theta_{k}	\\
-			\omega_{k}		\\
-			v_{k}
+			\omega_{k}
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
 			\sqrt{\left(x_{k} - x_{k-1}\right)^{2} + \left(y_{k} - y_{k-1}\right)^{2}}	\\
 			\theta_{k} - \theta_{k-1}								\\
-			\frac{\theta_{k}-\theta_{k-1}}{T}						\\
-			\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2} + \left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}	
+			\frac{\theta_{k}-\theta_{k-1}}{T}
 		\end{bmatrix}
 	\end{equation}
 	
@@ -110,9 +109,9 @@ Several different ways to combine the estimations of different sensors, difficul
 	\label{eq:Hsys}
 		\boldsymbol{H}_{k}	=
 		\begin{bmatrix}
-			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		&\frac{x_{k}-x_{k-1}}{T\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2}+\left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}}	\\
-			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		&\frac{y_{k}-y_{k-1}}{T\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2}+\left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}}	\\
-			0															&1	&\frac{1}{T}	&0																				\\
+			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
+			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
+			0															&1	&\frac{1}{T}
 			
 		\end{bmatrix}^{\top}
 	\end{equation}
@@ -147,7 +146,8 @@ Several different ways to combine the estimations of different sensors, difficul
 		x 		= 3.5-\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
 	\end{equation}
 	
-	
+	\begin{figure}
+	\centering
 	\begin{tikzpicture}
 %		\draw[step=1cm,lightgray,very thin] (-0.9,-0.9) grid (4.9, 3.9);
 		\foreach \x in {0,1,2,3}
@@ -164,6 +164,9 @@ Several different ways to combine the estimations of different sensors, difficul
 		\filldraw[fill=blue, blue] (0,0) circle (0.1cm);
 		\filldraw[fill=blue, blue] (0,3) circle (0.1cm);
 	\end{tikzpicture}
+		\label{fig:beac1}
+		\caption{Left beacons showing measurable locations in green.}
+	\end{figure}
 	
 \subsection{EKF}
 
@@ -204,8 +207,25 @@ Several different ways to combine the estimations of different sensors, difficul
 		\boldsymbol{P}_{2,\,k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{2,\,k}\boldsymbol{H}_{2,\,k}\right)\boldsymbol{P}_{1,\,k}^{-}
 	\end{equation}
 	\begin{equation}
-	\label{eq:x+}
+	\label{eq:x+sec}
 		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right) + \boldsymbol{K}_{2,\,k}\left(\boldsymbol{y}_{2,\,k}-\boldsymbol{H}_{2,\,k}\hat{\boldsymbol{x}}_{k}^{-}\right)
+	\end{equation}
+	
+	If the secondary measurement is delayed by $s+N$ samples, where $s$ is the sample which the measurement refers to, then the recalculation instead then becomes
+	
+	\begin{equation}
+	\begin{aligned}
+	\label{eq:x+del}
+		\hat{\boldsymbol{x}}_{k}^{+}=&\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right)	\\
+		&+ \boldsymbol{W}\boldsymbol{K}_{2,\,s}\left(\boldsymbol{y}_{2,\,k}-\boldsymbol{H}_{2,\,s}\hat{\boldsymbol{x}}_{s}^{-}\right)
+	\end{aligned}
+	\end{equation}
+	
+	where
+	
+	\begin{equation}
+	\label{eq:W}
+		\boldsymbol{W} = \prod^{i=N}_{i=1}\left(\boldsymbol{I} - \boldsymbol{K}_{s+i}\boldsymbol{H}_{1,\,s+1}\right)\boldsymbol{F}_{s+i-1}
 	\end{equation}
 \section{Results and Discussion}
 \label{sec:res}

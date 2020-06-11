@@ -94,13 +94,15 @@ Several different ways to combine the estimations of different sensors, difficul
 		\begin{bmatrix}
 			\delta s_{k} 		\\
 			\delta\theta_{k}	\\
-			\omega_{k}
+			\omega_{k}		\\
+			v_{k}
 		\end{bmatrix}
 		=
 		\begin{bmatrix}
 			\sqrt{\left(x_{k} - x_{k-1}\right)^{2} + \left(y_{k} - y_{k-1}\right)^{2}}	\\
 			\theta_{k} - \theta_{k-1}								\\
-			\frac{\theta_{k}-\theta_{k-1}}{T}
+			\frac{\theta_{k}-\theta_{k-1}}{T}						\\
+			\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2} + \left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}	
 		\end{bmatrix}
 	\end{equation}
 	
@@ -108,9 +110,10 @@ Several different ways to combine the estimations of different sensors, difficul
 	\label{eq:Hsys}
 		\boldsymbol{H}_{k}	=
 		\begin{bmatrix}
-			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
-			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		\\
-			0															&1	&\frac{1}{T}	\\
+			\frac{x_{k}-x_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		&\frac{x_{k}-x_{k-1}}{T\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2}+\left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}}	\\
+			\frac{y_{k}-y_{k-1}}{\sqrt{\left( x_{k} - x_{k-1} \right)^{2}+\left( y_{k} - y_{k-1} \right)^{2}}}	&0	&0		&\frac{y_{k}-y_{k-1}}{T\sqrt{\left(\frac{x_{k} - x_{k-1}}{T}\right)^{2}+\left(\frac{y_{k} - y_{k-1}}{T}\right)^{2}}}	\\
+			0															&1	&\frac{1}{T}	&0																				\\
+			
 		\end{bmatrix}^{\top}
 	\end{equation}
 

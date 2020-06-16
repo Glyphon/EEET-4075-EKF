@@ -2,7 +2,7 @@ clear variables, close all
 clc
 
 rosshutdown;
-rosinit('http://10.128.0.216:11311');
+rosinit('http://192.168.1.102:11311');
 
 control_pub = rospublisher('/cmd_vel');
 velmsg = rosmessage(control_pub);
@@ -12,7 +12,7 @@ odom_sub =  rossubscriber('/odom');
 scan_sub = rossubscriber('/scan');
 pause(2)
 
-total_samples = 300;
+total_samples = 600;
 
 xhat_graph = zeros(total_samples,3);
 time_stamp = zeros(total_samples,3);
@@ -21,13 +21,12 @@ imu_graph = zeros(total_samples,2);
 
 b = 0.287;  % wheelbase of wafflepi.
 r = 0.033;
-time_prev = 0;
-dT = 0.0753; % Update rate based on averaging of sample time. 0.038 = realbot
+dT = 0.07; % Update rate based on averaging of sample time. 0.038 = realbot
 
 deltas = 0;
 deltaTheta = 0;
 xhat_priori = [0;0;0];
-xhat_post_prev = [0; 0; 0;]; %Initial position, [x, y, theta]
+xhat_post_prev = [0.25; 0.25; 0.25;]; %Initial position, [x, y, theta]
 F_prev = zeros(3);
 Q_prev = zeros(3);
 k = 0.0005;
@@ -41,12 +40,15 @@ K = zeros(3,3);
 y = [0;0;0];
 xhat_post = [0;0;0];
 
+lidar = receive(scan_sub);
+[xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3)] = lidarCalc(xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
+
 velmsg.Angular.Z = 0;
 velmsg.Linear.X = 0.2;
 send(control_pub,velmsg);
 
 for i = 1:total_samples
-    if i == 500
+    if i == 300
         velmsg.Angular.Z = 0;
         velmsg.Linear.X = 0.02;
         send(control_pub,velmsg);
@@ -64,12 +66,18 @@ for i = 1:total_samples
         0, 1, dT*velmsg.Linear.X*cos(xhat_post_prev(3));
         0, 0, 1];
     
+    if mod(i, 10) == 0
+        lidar = receive(scan_sub);
+        [xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3)] = lidarCalc(xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
+    end
+    
     joint = receive(joint_sub);
     imu = receive(imu_sub);
     odom = receive(odom_sub);
     
     imu_graph(i,1) = imu.LinearAcceleration.X;
     imu_graph(i,2) = imu.AngularVelocity.Z;
+    
     
     tic
 
@@ -84,6 +92,9 @@ for i = 1:total_samples
     time_stamp(i,1) = imu.Header.Stamp.Sec + imu.Header.Stamp.Nsec*10^-9;
     time_stamp(i,2) = joint.Header.Stamp.Sec + imu.Header.Stamp.Nsec*10^-9;
     
+    if i > 1
+        dT = time_stamp(i,1) - time_stamp(i-1,1);
+    end
     if i == 1
         joint_prev = joint.Position;
     end

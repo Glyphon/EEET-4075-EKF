@@ -10,66 +10,131 @@ joint_sub = rossubscriber('/joint_states');
 imu_sub = rossubscriber('/imu');
 odom_sub =  rossubscriber('/odom');
 scan_sub = rossubscriber('/scan');
-pause(2)
+%parpool;
 
-total_samples = 600;
+total_samples = 200;
 
 xhat_graph = zeros(total_samples,3);
 time_stamp = zeros(total_samples,3);
 odom_graph = zeros(total_samples,3);
 imu_graph = zeros(total_samples,2);
+y2_graph = zeros(total_samples,3);
 
 b = 0.287;  % wheelbase of wafflepi.
 r = 0.033;
-dT = 0.07; % Update rate based on averaging of sample time. 0.038 = realbot
+dT = 0.2;
+noLidar = 0;
+ang_vel = 0;
+ang_vel_prev = 0;
+
+waypoints = [[0.25;0.25] [1.5;1.5] [1.5;2.5] [ 3;2.5] [1.5;0.25]];
+Kp = 2;
+
+waypointNav = 1;
+xEnd = waypoints(1,waypointNav);
+yEnd = waypoints(2,waypointNav);
 
 deltas = 0;
 deltaTheta = 0;
 xhat_priori = [0;0;0];
-xhat_post_prev = [0.25; 0.25; 0.25;]; %Initial position, [x, y, theta]
+xhat_post_prev = [0.25; 0.25; 0;]; %Initial position, [x, y, theta]
 F_prev = zeros(3);
-Q_prev = zeros(3);
+F_held = zeros(3,3,6);
+Q_prev = diag([0.01, 0.01, 0.02]);
 k = 0.0005;
 P_priori = zeros(3);
-P_post_prev = ([0.15; 0.15; 0.15] - xhat_post_prev)*transpose([0.15; 0.15; 0.15] - xhat_post_prev);
-v_prev = 0;
-v = 0;
-H = zeros(3,3);
-R = zeros(3);
-K = zeros(3,3);
+P_post_prev = ([0.01; 0.01; 0.01] - xhat_post_prev)*transpose([0.01; 0.01; 0.01] - xhat_post_prev);
+H = zeros(3);
+H_held = zeros(3,3,6);
+H2 = diag([1, 1, 1]);
+R = diag([0.02, 0.02, 0.01]);
+R2 = diag([0.03, 0.03, 0.02]);
+K = zeros(3);
+K_held = zeros(3,3,6);
+K2 = zeros(3);
+W = zeros(3);
 y = [0;0;0];
+y2 = [0;0;0];
 xhat_post = [0;0;0];
+xhat_s = [0;0;0];
 
 lidar = receive(scan_sub);
 [xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3)] = lidarCalc(xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
 
 velmsg.Angular.Z = 0;
-velmsg.Linear.X = 0.2;
+velmsg.Linear.X = 0.15;
 send(control_pub,velmsg);
 
+rate = rateControl(5);
+lidar = receive(scan_sub);
+lidarFunc = parfeval(@lidarCalc, 3, xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
+
 for i = 1:total_samples
-    if i == 300
-        velmsg.Angular.Z = 0;
-        velmsg.Linear.X = 0.02;
-        send(control_pub,velmsg);
-    elseif i == 100
-        velmsg.Angular.Z = 0.3;
-        velmsg.Linear.X = 0.1;
-        send(control_pub,velmsg);
+    mod_loop = mod(i,5) + 1;
+        
+    % use below control logic to calculate phi_desired in four
+    % quadrants
+    if xEnd>xhat_post_prev(1)
+        if yEnd>xhat_post_prev(2) % 1st quadrant
+            phi_desired = atan((yEnd-xhat_post_prev(2))/(xEnd-xhat_post_prev(1)));
+        else % 4th quadrant
+            phi_desired = 2*pi - atan(abs(yEnd-xhat_post_prev(2))/abs(xEnd-xhat_post_prev(1)));
+        end
+    else
+        if yEnd>xhat_post_prev(2) % 2nd quadrant
+            phi_desired = pi - atan(abs(yEnd-xhat_post_prev(2))/abs(xEnd-xhat_post_prev(1)));
+        else % 3rd quadrant
+            phi_desired = pi + atan(abs(yEnd-xhat_post_prev(2))/abs(xEnd-xhat_post_prev(1)));
+        end
+    end        
+        
+    error = xhat_post_prev(3) - phi_desired;
+    error = wrapToPi(error);
+    ang_vel = -Kp * error;
+    if abs(ang_vel_prev - ang_vel) > 0.03
+        if ang_vel_prev - ang_vel > 0
+            ang_vel = ang_vel_prev - 0.03;
+        else
+            ang_vel = ang_vel_prev + 0.03;
+        end
+    end
+    if abs(ang_vel) > 0.3
+        if ang_vel > 0
+            ang_vel = 0.3;
+        else
+            ang_vel = -0.3;
+        end
+    end
+    ang_vel_prev = ang_vel;
+
+    velmsg.Angular.Z = ang_vel;
+    send(control_pub,velmsg); 
+
+    distance = sqrt((xEnd-xhat_post_prev(1))^2+(yEnd-xhat_post_prev(2))^2);
+
+    % stop the robot if the distance between robot and goal is less than
+    % 0.1m
+    if abs(distance)<0.1
+        if waypointNav < 5
+            waypointNav = waypointNav + 1;
+       end
+       xEnd = waypoints(1,waypointNav)
+       yEnd = waypoints(2,waypointNav)
     end
     
     xhat_priori(1) = xhat_post_prev(1) + dT*velmsg.Linear.X*cos(xhat_post_prev(3));
     xhat_priori(2) = xhat_post_prev(2) + dT*velmsg.Linear.X*sin(xhat_post_prev(3));
     xhat_priori(3) = xhat_post_prev(3) + dT*velmsg.Angular.Z;
     
+    if i == 1
+        xhat_s = xhat_priori;
+    end
+    
     F_prev = [1, 0, -dT*velmsg.Linear.X*sin(xhat_post_prev(3));
         0, 1, dT*velmsg.Linear.X*cos(xhat_post_prev(3));
         0, 0, 1];
     
-    if mod(i, 10) == 0
-        lidar = receive(scan_sub);
-        [xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3)] = lidarCalc(xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
-    end
+    F_held(:,:,mod_loop) = F_prev;
     
     joint = receive(joint_sub);
     imu = receive(imu_sub);
@@ -77,9 +142,6 @@ for i = 1:total_samples
     
     imu_graph(i,1) = imu.LinearAcceleration.X;
     imu_graph(i,2) = imu.AngularVelocity.Z;
-    
-    
-    tic
 
     odom_graph(i,1) = odom.Pose.Pose.Position.X;
     odom_graph(i,2) = odom.Pose.Pose.Position.Y;
@@ -98,15 +160,14 @@ for i = 1:total_samples
     if i == 1
         joint_prev = joint.Position;
     end
+    
     deltas = (joint.Position(1) - joint_prev(1) + joint.Position(2) - joint_prev(2))*r/2;
     deltaTheta = (joint.Position(1) - joint_prev(1) - joint.Position(2) + joint_prev(2))*r/b;
     joint_prev = joint.Position;
     
-    Q_prev = diag([0.01, 0.01, 0.1]);
+    Q_prev = diag([velmsg.Linear.X + 0.02, velmsg.Linear.X + 0.02, velmsg.Angular.Z + 0.2]);
     
     P_priori = F_prev*P_post_prev*transpose(F_prev)+Q_prev;
-    
-    v = v_prev + imu.LinearAcceleration.X*dT;
     
     if abs(xhat_priori(3)-xhat_post_prev(3)) > pi
         if xhat_priori(3) > xhat_post_prev(3)
@@ -115,26 +176,17 @@ for i = 1:total_samples
             xhat_priori(3) = xhat_priori(3) + 2*pi;
         end
     end
-%    H = [(xhat_priori(1)-xhat_post_prev(1))/(sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2)), (xhat_priori(2)-xhat_post_prev(2))/(sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2)), 0;
-%        0, 0, 1;
-%        0, 0, 1/dT;
-%        (xhat_priori(1)-xhat_post_prev(1))/(dT*sqrt(((xhat_priori(1)-xhat_post_prev(1))/dT)^2+((xhat_priori(2)-xhat_post_prev(2))/dT)^2)), (xhat_priori(2)-xhat_post_prev(2))/dT*(sqrt(((xhat_priori(1)-xhat_post_prev(1))/dT)^2+((xhat_priori(2)-xhat_post_prev(2))/dT)^2)), 0];
+    
     H = [(xhat_priori(1)-xhat_post_prev(1))/(sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2)), (xhat_priori(2)-xhat_post_prev(2))/(sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2)), 0;
         0, 0, 1;
         0, 0, 1/dT];
-
-%    R = diag([0.2, 0.2, 0.1, 0.1]);
-    R = diag([0.2, 0.2, 0.2]);
+    H_held(:,:,mod_loop) = H;
     
     K = P_priori*transpose(H)*inv(H*P_priori*transpose(H)+R);
+    K_held(:,:,mod_loop) = K;
     
-%    y = [deltas; deltaTheta; imu.AngularVelocity.Z; v];
     y = [deltas; deltaTheta; imu.AngularVelocity.Z];
    
-%    h = [sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2);
-%        xhat_priori(3) - xhat_post_prev(3);
-%        (xhat_priori(3) - xhat_post_prev(3))/dT;
-%        sqrt(((xhat_priori(1)-xhat_post_prev(1))/dT)^2+((xhat_priori(2)-xhat_post_prev(2))/dT)^2)];
     h = [sqrt((xhat_priori(1)-xhat_post_prev(1))^2+(xhat_priori(2)-xhat_post_prev(2))^2);
         xhat_priori(3) - xhat_post_prev(3);
         (xhat_priori(3) - xhat_post_prev(3))/dT];
@@ -147,15 +199,38 @@ for i = 1:total_samples
         end
     end
     
-    xhat_post = xhat_priori + K*(y-h);
+    if mod(i, 5) == 0 && noLidar == 0
+        [y2(1), y2(2), y2(3)] = fetchOutputs(lidarFunc);
+        y2_graph(i,:) = y2;
+        
+        lidar = receive(scan_sub);
+        lidarFunc = parfeval(@lidarCalc, 3, xhat_post_prev(1), xhat_post_prev(2), xhat_post_prev(3), lidar.Ranges, lidar.RangeMax, lidar.RangeMin, lidar.AngleIncrement);
+
+        if isnan(y2)
+            xhat_post = xhat_priori + K*(y-h);
+            P_post_prev = (eye(3) - K*H)*P_priori;
+        else
+            K2 = P_priori*transpose(H2)*inv(H2*P_priori*transpose(H2)+R2);
+            P_post_prev = (eye(3) - K2*H2)*P_priori;
+            W = (eye(3) - K_held(:,:,2)*H_held(:,:,2))*F_held(:,:,1);
+            for j = 2:5
+                W = W * (eye(3) - K_held(:,:,j+1)*H_held(:,:,j+1))*F_held(:,:,j);
+            end
+
+            xhat_post = xhat_priori + K*(y-h) + W*K2*(y2-H2*xhat_s);
+        end
+        xhat_s = xhat_priori;
+    else
+        xhat_post = xhat_priori + K*(y-h);
+        P_post_prev = (eye(3) - K*H)*P_priori;
+    end
+    
     xhat_post(3) = wrapToPi(xhat_post(3));
     xhat_post_prev = xhat_post;
     
-    P_post_prev = (eye(3)-K*H)*P_priori;
-    v_prev = v;
-    
     xhat_graph(i,:) = xhat_post;
-    time_stamp(i,3) = toc;
+    
+    waitfor(rate);
 end
 velmsg.Angular.Z = 0.0;
 velmsg.Linear.X = 0.0;
@@ -182,8 +257,9 @@ figure(2)
 hold on
 plot(1:total_samples, xhat_graph(:,3))
 plot(1:total_samples, odom_graph(:,3))
+plot([1:total_samples] - 5, y2_graph(:,3), '*')
 title('Ground Truth orientation versus EKF prediciton')
-legend('Estimate', 'Ground Truth')
+legend('Estimate', 'Ground Truth', 'Beacon')
 grid on
 hold off
 
@@ -191,15 +267,9 @@ figure(3)
 hold on
 plot(xhat_graph(:,1), xhat_graph(:,2))
 plot(odom_graph(:,1), odom_graph(:,2))
+plot(y2_graph(:,1), y2_graph(:,2), '*')
 title('Ground Truth position versus EKF prediciton')
-legend('Estimate', 'Ground Truth')
-grid on
-hold off
-
-figure(4)
-hold on
-plot(1:total_samples, time_stamp(:,3))
-title('EKF computation time')
+legend('Estimate', 'Ground Truth', 'Beacon')
 grid on
 hold off
 

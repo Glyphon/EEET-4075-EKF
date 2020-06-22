@@ -9,7 +9,7 @@ function [xHat, yHat, thetaHat] =...
         3.625, 3.125;...
         -0.125, 3.125]; % Beacon coordinates (i,1)=x (i,2)=y
     phiTolerance = 15; % Tolerance of angle reading in degree integers
-    beaconRadius = 0.11; % Radius of beacons 0.125 = sim, 0.11 = phys
+    beaconRadius = 0.125; % Radius of beacons 0.125 = sim, 0.11 = phys
     lidarOffset = 0.064;
     lidarShift = 0;
     

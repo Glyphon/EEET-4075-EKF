@@ -94,37 +94,43 @@
 
 \subsection{Absolute}
 	The secondary measurement was implemented as a beacon based navigation system with a method similar to \cite{beacon}. The main difference being that the number of beacons being measured is limited to only two. This is done to reduce the computation time at the expense of accuracy. The method used also does not allow for a definite single estimation position, but a pair of them. With the appropriate assumptions and control measures in place though, one of the positions can always be ruled out.\par
-	To estimate the orientation of the turtlebot, the angle to the closest beacon is used as a correction.
-	
-	To estimate the position of the turtlebot, the intersection of two circles is calculated knowing their center coordinates and radii.
+	\begin{figure}
+	\begin{tikzpicture}[node distance = 2cm, auto]
+		\node [block] (init) {Lower beacon angle estimate};
+		\node [cloud, left of=init] (dead) {Primary pose estimate};
+		\node [cloud, right of=init] (lidar) {LiDAR measurement};
+		\node [block, below of=init] (theta) {Secondary $\theta$ estimate};
+		\node [block, below of=theta] (upper) {Position triangulation};
+		\node [cloud, below of=upper] (done) {Pose estimate};
+		
+		\path [line,dashed] (lidar) -- (init);
+		\path [line,dashed] (lidar) |- (upper);
+		\path [line,dashed] (dead) -- (init);
+		\path [line] (init) -- (theta);
+		\path [line] (theta) -- (upper);
+		\path [line,dashed] (upper) -- (done);
+		\path [line,dashed] (theta.west) -| ++(-1,0) |- (done.west);
+	\end{tikzpicture}
+	\caption{Secondary pose estimate procedure}
+	\label{fig:dec}
+	\end{figure}
+	The simplified procedure for pose estimation using the LiDAR is demonstrated in figure \ref{fig:dec} and first involves taking the pose estimate from the primary measurements to estimate where one of the beacons should be. This is done using \ref{eq:thetab1}, however, as the center of the LiDAR is offset from the estimate position by $0.064\,\text{m}$, the corrections in \ref{eq:xcorr} and \ref{eq:ycorr} need to be used first.
 	\begin{equation}
-	\begin{aligned}
-		\left(x-x_{1}\right)^{2} + \left(y-y_{1}\right)^{2}=r_{1}^{2}	\\
-		\left(x-x_{2}\right)^{2} + \left(y-y_{2}\right)^{2}=r_{2}^{2}
-	\end{aligned}
-	\end{equation}
-	Rearranging, and with the assumption that $x_{1}=x_{2}$  in both cases we get
-	\begin{equation}
-		y = -\frac{r_{1}^{2}-r_{2}^{2}-y_{1}^{2}+y_{2}^{2}}{2\left(y_{1}-y_{2}\right)}
-	\end{equation}
-	
-	\begin{equation}
-		x 		= \pm \frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
-	\end{equation}
-	\begin{equation}
-		\beta_{1} 	= \left(r_{1}+r_{2}+y_{1}-y_{1}\right)\left(r_{1}+r_{2}-y_{1}+y_{1}\right)
-	\end{equation}
-	\begin{equation}
-		\beta_{2} 	=\left(r_{1}-r_{2}+y_{1}-y_{1}\right)\left(-r_{1}+r_{2}+y_{1}-y_{1}\right)
-	\end{equation}
-	As we know the fence around which the bot cannot escape, one of the possible positions can be eliminated, leaving BLAH if using the left beacons, and BLAH if using the right beacons.
-	\begin{equation}
-		x 		= x_{1}+\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
-	\end{equation}
-	\begin{equation}
-		x 		= x_{1}-\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\label{eq:xcorr}
+		\hat{x} = \hat{x} - 0.064\sin{\left(\theta\right)}
 	\end{equation}
 	
+	\begin{equation}
+	\label{eq:ycorr}
+		\hat{y} = \hat{y} - 0.064\cos{\left(\theta\right)}
+	\end{equation}
+	
+	\begin{equation}
+	\label{eq:thetab1}
+		\hat{\theta}_{b1} = \text{atan2}\left(\left(y_{1} - \hat{y}\right),\,\left(x_{1} - \hat{x}\right)\right)
+	\end{equation}
+	
+	The choice of beacon is arbitrary, as long as the beacon is within the LiDAR maximum measurement range of $3.5\,\text{m}$. Being that the pose of the bot has been estimated previously, that can be used to determine which beacons can be used for triangulation. Figure \ref{fig:beac1} shows the locations in which two beacons on the left side of a 3.5 x 3 m field can be measured from. It shows that having a beacon in each corner means being able to cover the entire field. As such the beacons to be used can be calculated ahead of time simply by knowing which half of the field the bot thinks it is in. Assuming that the LiDAR is always in range of two beacons, and that the bot is restricted to being on only one side of each pair, it is possible to expand this method almost indefinitely to cover any space.\par
 	\begin{figure}
 	\centering
 	\begin{tikzpicture}
@@ -139,11 +145,47 @@
 		\filldraw[fill=blue, blue] (0,0) circle (0.1cm);
 		\filldraw[fill=blue, blue] (0,3) circle (0.1cm);
 	\end{tikzpicture}
-		\label{fig:beac1}
 		\caption{Left beacons showing measurable locations in green.}
+		\label{fig:beac1}
 	\end{figure}
+		
+	
+	To estimate the position of the TurtleBot, the intersection of two circles is calculated using knowing their center coordinates and radii.
+	\begin{equation}
+	\begin{aligned}
+		\left(x-x_{1}\right)^{2} + \left(y-y_{1}\right)^{2}=r_{1}^{2}	\\
+		\left(x-x_{2}\right)^{2} + \left(y-y_{2}\right)^{2}=r_{2}^{2}
+	\end{aligned}
+	\end{equation}
+	Rearranged, and with the assumption that $x_{1}=x_{2}$  in both cases we get \ref{eq:ypose} through \ref{eq:beta}.
+	\begin{equation}
+	\label{eq:ypose}
+		y = -\frac{r_{1}^{2}-r_{2}^{2}-y_{1}^{2}+y_{2}^{2}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
 	
 	\begin{equation}
+		x 		= \pm \frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	\begin{equation}
+		\beta_{1} 	= \left(r_{1}+r_{2}+y_{1}-y_{1}\right)\left(r_{1}+r_{2}-y_{1}+y_{1}\right)
+	\end{equation}
+	\begin{equation}
+	\label{eq:beta}
+		\beta_{2} 	=\left(r_{1}-r_{2}+y_{1}-y_{1}\right)\left(-r_{1}+r_{2}+y_{1}-y_{1}\right)
+	\end{equation}
+	If it is assumed that the bot cannot escape from the field at any point, one of the possible $x$ positions can always be eliminated, leaving \ref{eq:x1l} if using the left beacons, and \ref{eq:x1r} if using the right beacons.
+	\begin{equation}
+	\label{eq:x1l}
+		x 		= x_{1}+\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	\begin{equation}
+	\label{eq:x1r}
+		x 		= x_{1}-\frac{\sqrt{\beta_{1}\beta_{2}}}{2\left(y_{1}-y_{2}\right)}
+	\end{equation}
+	
+	Finally, the observation model can be derived quite simply, being that the measurements are estimating the states directly, giving \ref{eq:h2} and its Jacobian \ref{eq:H2}.
+	\begin{equation}
+	\label{eq:h2}
 		\boldsymbol{h}_{ k} =
 		\begin{bmatrix}
 			\hat{x}_{k} 		\\
@@ -159,6 +201,7 @@
 	\end{equation}
 	
 	\begin{equation}
+	\label{eq:H2}
 		\boldsymbol{H}_{k} =
 		\begin{bmatrix}
 			1	& 0	& 0	\\
@@ -169,8 +212,8 @@
 	
 	
 \subsection{EKF}
-
-	a priori estimate
+	For the actual EKF, it was split into two parts, the first is a standard EKF using only the primary measurements as its inputs, and the second part is the fusing of the delayed secondary measurements with the primary using Alexander's Method as described above.\par
+	For the primary measurement, first the priori state and error covariance estimate are calculated.
 	\begin{equation}
 	\label{eq:x-}
 		\hat{\boldsymbol{x}}_{k}^{-}=\boldsymbol{f}_{k-1}\left(\hat{\boldsymbol{x}}^{+}_{k-1},\,\boldsymbol{u}_{k-1}\right)
@@ -181,13 +224,13 @@
 		\boldsymbol{P}_{k}^{-} = \boldsymbol{F}_{k-1}\boldsymbol{P}_{k-1}^{+}\boldsymbol{F}_{k-1}^{\top} + \boldsymbol{Q}_{k-1}
 	\end{equation}
 	
-	Kalman gain update,
+	Then the Kalman gain is update.
 	\begin{equation}
 	\label{eq:K}
 		\boldsymbol{K}_{1,\,k} = \boldsymbol{P}_{k}^{-}\boldsymbol{H}_{1,\,k}^{\top}\left(\boldsymbol{H}_{1,\,k}\boldsymbol{P}{1,\,k}^{-}\boldsymbol{H}_{1,\,k}^{\top} + \boldsymbol{R}_{1,\,k} \right)^{-1}
 	\end{equation}
 	
-	a posteriori estimate,
+	Finally, the posterior state and error covariance estimates are calculated.
 	\begin{equation}
 	\label{eq:x+}
 		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right)
@@ -197,7 +240,7 @@
 	\label{eq:p+}
 		\boldsymbol{P}_{1,\,k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{1,\,k}\boldsymbol{H}_{1,\,k}\right)\boldsymbol{P}_{1,\,k}^{-}
 	\end{equation}
-	When the secondary measurement is received, the kalman gain, error, and state estimate are updated
+	When the secondary measurement is received, the Kalman gain, and posterior error covariance are updated.
 	\begin{equation}
 	\label{eq:K2}
 		\boldsymbol{K}_{2,\,k} = \boldsymbol{P}_{1,\,k}^{-}\boldsymbol{H}_{2,\,k}^{\top}\left(\boldsymbol{H}_{2,\,k}\boldsymbol{P}_{1,\,k}^{-}\boldsymbol{H}_{2,\,k}^{\top} + \boldsymbol{R}_{2,\,k} \right)^{-1}
@@ -206,12 +249,8 @@
 	\label{eq:p2+}
 		\boldsymbol{P}_{2,\,k}^{+} = \left(\boldsymbol{I} - \boldsymbol{K}_{2,\,k}\boldsymbol{H}_{2,\,k}\right)\boldsymbol{P}_{1,\,k}^{-}
 	\end{equation}
-	\begin{equation}
-	\label{eq:x+sec}
-		\hat{\boldsymbol{x}}_{k}^{+}=\hat{\boldsymbol{x}}_{k}^{-} + \boldsymbol{K}_{1,\,k}\left(\boldsymbol{y}_{1,\,k}- \boldsymbol{h}_{1,\,k}\right) + \boldsymbol{K}_{2,\,k}\left(\boldsymbol{y}_{2,\,k}-\boldsymbol{H}_{2,\,k}\hat{\boldsymbol{x}}_{k}^{-}\right)
-	\end{equation}
 	
-	If the secondary measurement is delayed by $s+N$ samples, where $s$ is the sample with which the measurement refers to, then the recalculation adds one more term to account for the delay.
+	Finally the posterior state estimate is recalculated. As it's known that the secondary measurement will be delayed by $s+N$ samples, where $s$ is the sample with which the measurement refers to, then the recalculation of the fused posterior state estimate adds one more term, $\boldsymbol{W}$. to account for the delay.
 	
 	\begin{equation}
 	\begin{aligned}

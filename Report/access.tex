@@ -10,14 +10,24 @@
 \usepackage{etoolbox}
 \usepackage{placeins}
 \usepackage{tikz}
-	\NewSpotColorSpace{PANTONE}
-	\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
-	\SetPageColorSpace{PANTONE}%
 
+% Needed to fix tikz used in ieeeaccess class.
+\NewSpotColorSpace{PANTONE}
+\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
+\SetPageColorSpace{PANTONE}%
+
+\usetikzlibrary{shapes,arrows}
+\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=5em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{cloud} = [draw, ellipse,fill=red!20, text width=5em, text centered, node distance=3cm,
+    minimum height=2em]
 
 \begin{document}
 
-\history{Date of current version June 22, 2020.}
+\history{Date of current version June 25, 2020.}
 \doi{PLACEHOLDER}
 
 \title{EEET 4075 Mechatronic System Design 2 - Project Report}
@@ -30,33 +40,11 @@
 {Michael J. Duke: EEET 4075 Mechatronic System Design 2 - Project Report}
 
 \begin{abstract}
-These instructions give you guidelines for preparing papers for 
-IEEE Access. Use this document as a template if you are 
-using \LaTeX. Otherwise, use this document as an 
-instruction set. The electronic file of your paper will be formatted further 
-at IEEE. Paper titles should be written in uppercase and lowercase letters, 
-not all uppercase. Avoid writing long formulas with subscripts in the title; 
-short formulas that identify the elements are fine (e.g., "Nd--Fe--B"). Do 
-not write ``(Invited)'' in the title. Full names of authors are preferred in 
-the author field, but are not required. Put a space between authors' 
-initials. The abstract must be a concise yet comprehensive reflection of 
-what is in your article. In particular, the abstract must be self-contained, 
-without abbreviations, footnotes, or references. It should be a microcosm of 
-the full article. The abstract must be between 150--250 words. Be sure that 
-you adhere to these limits; otherwise, you will need to edit your abstract 
-accordingly. The abstract must be written as one paragraph, and should not 
-contain displayed mathematical equations or tabular material. The abstract 
-should include three or four different keywords or phrases, as this will 
-help readers to find it. It is important to avoid over-repetition of such 
-phrases as this can result in a page being rejected by search engines. 
-Ensure that your abstract reads well and is grammatically correct.
+To determine an absolute position and orientation of a robot is not a simple task. Every sensor is subject to noise and errors of some sort, even systems such as the Global Navigation System used in many systems today is subject to large amount of noise and error, making their direct usage less useful. To overcome this, this report demonstrates a method which combines an instantaneous, fast updating, inertia and wheel encoder based estimate, with a slower, delayed beacon based reference position. These estimates are fused using an Extended Kalman Filter (EKF) which is modified to account for the delayed, multirate, multisensor system that is used by incorporating Alexander's Method. The results showed that while the modified EKF worked quite well in and of itself, despite a relatively low update rate, systemic errors introduced in the absolute position reference caused a fair amount of error while traveling at higher velocities.
 \end{abstract}
 
 \begin{keywords}
-Enter key words or phrases in alphabetical 
-order, separated by commas. For a list of suggested keywords, send a blank 
-e-mail to keywords@ieee.org or visit \underline
-{http://www.ieee.org/organizations/pubs/ani\_prod/keywrd98.txt}
+Dead reckoning, Distance measurement, Indoor navigation, Kalman filters, Nonlinear filters, Robot motion.
 \end{keywords}
 
 \titlepgskip=-15pt

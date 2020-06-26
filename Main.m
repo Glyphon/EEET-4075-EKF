@@ -48,6 +48,7 @@ model_graph = zeros(total_samples,3);
 joint_graph = zeros(total_samples,3);
 imuphi_graph = zeros(total_samples,1);
 lidar_graph = zeros(total_samples,3);
+velocity_graph = zeros(total_samples:2);
 
 % Init variables 
 b = 0.287;          % Wheelbase of waffle pi.
@@ -163,7 +164,7 @@ for i = 1:total_samples
     if ang_vel == 0
         lin_vel = lin_vel_max;
     else
-        lin_vel = 1/(20*abs(ang_vel));
+        lin_vel = 1/(100*abs(ang_vel));
         if lin_vel > lin_vel_max
             lin_vel = lin_vel_max;
         end
@@ -218,6 +219,9 @@ for i = 1:total_samples
     imu_graph(i,2) = imu.AngularVelocity.Z;
     odom_graph(i,1) = odom.Pose.Pose.Position.X;
     odom_graph(i,2) = odom.Pose.Pose.Position.Y;
+    velocity_graph(i,1) = sqrt(odom.Twist.Twist.Linear.X^2 ...
+        + odom.Twist.Twist.Linear.Y^2);
+    velocity_graph(i,2) = odom.Twist.Twist.Angular.Z;
     q0 = odom.Pose.Pose.Orientation.W;
     q1 = odom.Pose.Pose.Orientation.X;
     q2 = odom.Pose.Pose.Orientation.Y;
@@ -523,7 +527,6 @@ else
     print('posSimu', '-dpng', '-r600')
     
     thetaError = xhat_graph(:,3)-odom_graph(:,3);
-    thetaError(340) = thetaError(340) + 2*pi;
     figure(4)
     subplot(3,1,1)
     hold on
